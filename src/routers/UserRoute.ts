@@ -19,20 +19,23 @@ export class UserRoute extends Route{
             this.Contorller.findAll(req, res);
         })
 
-        /**
-         * 新增學生
-         * request body {
-         *  userName: string,
-         *  name: string",
-         *  department: string,
-         *  grade: string,
-         *  class: string,
-         *  Email: string
-         * } 
-         * @returns resp<Student>
-         */
-        this.router.post(`${this.url}insertOne`,(req, res)=>{
+        this.router.get(`${this.url}insertOne`,(req, res)=>{
             this.Contorller.insertOne(req, res);
         })
+
+        this.router.get(`${this.url}findByIp`,(req, res)=>{
+            this.Contorller.findByIp(req, res);
+        })
+
+        this.router.get(`${this.url}findById`,(req, res)=>{
+            this.Contorller.findById(req, res);
+        })
+
+
+        this.router.patch(`${this.url}setTitle`,(req, res)=>{
+            this.Contorller.setTitle(req, res);
+        })
+
+
     }
 }

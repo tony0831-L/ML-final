@@ -1,141 +1,156 @@
 import { Service } from "../abstract/Service";
-import { Student } from "../interfaces/Student";
-import { logger } from "../middlewares/log";
-import { studentsModel } from "../orm/schemas/studentSchemas";
 import { Document } from "mongoose"
 import { DBResp } from "../interfaces/DBResp";
 import { resp } from "../interfaces/resp";
-
-type seatInfo = {
-    schoolName:string,
-    department:string,
-    seatNumber:string
-}
+import { SessionsModel } from "../orm/schemas/sessionsSchema";
+import { Session } from "../interfaces/Session";
 
 export class UserService extends Service {
 
-    public async getAllStudents(): Promise<Array<DBResp<Student>>|undefined> {
-        try {
-            const res:Array<DBResp<Student>> = await studentsModel.find({});
-            return res;
-        } catch (error) {
-            return undefined;
-        }
-        
-    }
-
     /**
-     * 新增學生
-     * @param info 學生資訊
-     * @returns resp
+     * getAllSessions 
+     * @returns Sessions
      */
-    public async insertOne(info: Student): Promise<resp<DBResp<Student>|undefined>>{
+    public async getAllSessions(): Promise<resp<Array<DBResp<Session>> | undefined>> {
 
-        const current = await this.getAllStudents()
-        const resp:resp<DBResp<Student>|undefined> = {
+        const res: resp<Array<DBResp<Session>> | undefined> = {
             code: 200,
             message: "",
             body: undefined
+        };
+
+        try {
+            res.body = await SessionsModel.find({});
+            res.message = "find sucess"
+        } catch (error) {
+            res.message = error as string;
+            res.code = 500;
         }
 
-        if (current && current.length>0) {
-            try{
-                const nameValidator = await this.userNameValidator(info.userName);
-                if (current.length>=200) {
-                    resp.message = "student list is full";
-                    resp.code = 403;
-                }else{
-                    if (nameValidator === "驗證通過") {
-                        info.sid = String(current.length+1) ;
-                        info._id = undefined;
-                        const res = new studentsModel(info);
-                        resp.body = await res.save();
-                    }else{
-                        resp.code = 403;
-                        resp.message = nameValidator;
-                    }
-                }
-            } catch(error){
-                resp.message = "server error";
-                resp.code = 500;
-            }
-        }else{
-            resp.message = "server error";
-            resp.code = 500;
-        }
-
-        return resp;
-
-    }
+        return res;
+    };
 
     /**
-     * 學生名字驗證器
-     * @param userName 學生名字
-     * tku ee 0787
-     * ee 科系縮寫
-     *  0787 四碼
-     * 座號檢查，跟之前有重複就噴錯  只能寫沒重複的號碼
+     * insertSession
+     * @param session new Session
+     * @returns resp<Session>
      */
-    public async userNameValidator(userName: string): Promise<
-    '學生名字格式不正確，應為 tku + 科系縮寫 + 四碼座號，例如: tkubm1760' | '座號已存在' | '校名必須為 tku' | '座號格式不正確，必須為四位數字。' | '驗證通過'
-    > {
+    public async insertSession(session: Session): Promise<resp<DBResp<Session> | undefined>> {
 
-        if (userName.length < 7) { 
-            return ('學生名字格式不正確，應為 tku + 科系縮寫 + 四碼座號，例如: tkubm1760');
+        const res: resp<DBResp<Session> | undefined> = {
+            code: 200,
+            message: "",
+            body: undefined
+        };
+
+        try {
+            const newSession = new SessionsModel({
+                ...session
+            });
+
+            const resp = await newSession.save();
+
+            res.message = "insert sucess";
+
+            res.body = resp;
+
+        } catch (error) {
+            res.message = error as string;
+            res.code = 500;
         }
 
-        const info = this.userNameFormator(userName);
-
-        if (info.schoolName !== 'tku') {
-            return '校名必須為 tku';
-        }
-    
-        // 驗證座號(正則不想寫可以給 gpt 寫, 記得測試就好)
-        const seatNumberPattern = /^\d{4}$/; // 驗證4個數字
-        
-        if (!seatNumberPattern.test(info.seatNumber)) {
-            return '座號格式不正確，必須為四位數字。';
-        }
-
-        if (await this.existingSeatNumbers(info.seatNumber)) {
-            return '座號已存在'
-        }
-
-        return '驗證通過'
-        
-    }
+        return res;
+    };
 
     /**
-     * 用戶名格式化
-     * @param userName 用戶名
-     * @returns seatInfo
+     * findByIp
+     * @param ip 
+     * @param session 
      */
-    public userNameFormator(userName: string){
-        const info:seatInfo = {
-            schoolName: userName.slice(0, 3),
-            department: userName.slice(3, userName.length - 4),
-            seatNumber: userName.slice(-4)
-        }
-        return info
-    }
+    public async findByIp(ip: string): Promise<resp<Array<DBResp<Session>> | null>> {
+
+        const res: resp<Array<DBResp<Session>> | null> = {
+            code: 200,
+            message: "",
+            body: null
+        };
+
+        try {
+            const session = await SessionsModel.find({ ip: ip });
+            if (session) {
+                res.body = session;
+                res.message = "find one";
+            } else {
+                res.message = "ip not match any";
+                res.code = 404;
+            };
+
+        } catch (error) {
+            res.message = error as string;
+            res.code = 500;
+        };
+
+        return res;
+    };
 
     /**
-     * 檢查用戶名是否存在
-     * @param SeatNumber 
-     * @returns boolean
+     * findById
+     * @param id 
+     * @param session 
      */
-    public async existingSeatNumbers(SeatNumber:string):Promise<boolean>{
-        const students = await this.getAllStudents();
-        let exist = false
-        if (students) {
-            students.forEach((student)=>{
-                const info = this.userNameFormator(student.userName)
-                if (info.seatNumber === SeatNumber) {
-                    exist = true;
-                }
-            })
-        }
-        return exist
+    public async findById(id: string): Promise<resp<DBResp<Session> | null>> {
+
+        const res: resp<DBResp<Session> | null> = {
+            code: 200,
+            message: "",
+            body: null
+        };
+
+        try {
+            const session = await SessionsModel.findById(id);
+            if (session) {
+                res.body = session;
+                res.message = "find one";
+            } else {
+                res.message = "ip not match any";
+                res.code = 404;
+            };
+
+        } catch (error) {
+            res.message = error as string;
+            res.code = 500;
+        };
+
+        return res;
+    };
+
+    public async setTitle(id:string, title:string){
+
+        const res: resp<DBResp<Session> | null> = {
+            code: 200,
+            message: "",
+            body: null
+        };
+
+        try {
+            const session = await SessionsModel.findById(id);
+            if (session) {
+                session.subject = title;
+                await session.save();
+                res.body = session;
+                res.message = "update sucess";
+            } else {
+                res.message = "ip not match any";
+                res.code = 404;
+            };
+
+        } catch (error) {
+            res.message = error as string;
+            res.code = 500;
+        };
+
+        return res;
+
     }
 
 }

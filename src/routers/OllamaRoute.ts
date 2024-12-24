@@ -28,6 +28,11 @@ export class OllamaRoute extends Route{
         this.router.put(`${this.url}addDoc`,(req, res)=>{
             this.Contorller.addDoc(req, res);
         });
+
+        this.router.get(`${this.url}getLogBySid`,(req, res)=>{
+            this.Contorller.getLogBySid(req, res);
+        });
+        
     }
 
 }

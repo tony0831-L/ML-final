@@ -4,10 +4,11 @@ import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 
 export const webDocParser = async (url: string):Promise<Document<Record<string, any>>[]> => {
     // const pTagSelector = "bo";
+    const markdownSelector = ".markdown"
     const cheerioLoader = new CheerioWebBaseLoader(
         url,
         {
-            // selector: pTagSelector
+            selector: markdownSelector
         }
     );
     const docs = await cheerioLoader.load();
