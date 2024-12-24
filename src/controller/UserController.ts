@@ -42,7 +42,7 @@ export class UserController extends Contorller {
 
                 const session: Session = {
                     sid: token as string + (Request.query.id as string),
-                    ip: userIp as string,
+                    ip: (userIp as string).replace('::ffff:',''),
                     createTime: new Date().toLocaleString()
                 };
 
@@ -58,7 +58,8 @@ export class UserController extends Contorller {
      * @param session 
      */
     public async findByIp(Request: Request, Response: Response) {
-        const userIp = Request.headers['x-real-ip'] || Request.headers['x-forwarded-for'] || Request.ip;
+        let userIp = Request.headers['x-real-ip'] || Request.headers['x-forwarded-for'] || Request.ip;
+        userIp = (userIp as string).replace('::ffff:','')
         const resp = await this.service.findByIp(userIp as string)
         Response.status(resp.code).send(resp)
     }
